@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
 from starlette.responses import FileResponse
+# Note: SessionMiddleware requires 'itsdangerous' to be installed for secure cookie signing.
 from starlette.middleware.sessions import SessionMiddleware
 
 from sqlalchemy import create_engine, Column, String, Integer, DateTime, ForeignKey, Text
