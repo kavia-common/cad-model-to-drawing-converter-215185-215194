@@ -359,7 +359,7 @@ def _make_pdf(job_id: int, pdf_path: str):
 def _make_dxf(job_id: int, dxf_path: str):
     doc = ezdxf.new("R2010")
     msp = doc.modelspace()
-    msp.add_text(f"Job {job_id} DXF", dxfattribs={"height": 2.5}).set_pos((0, 0))
+    txt = msp.add_text(f"Job {job_id} DXF", dxfattribs={"height": 2.5, "insert": (0, 0)})
     msp.add_line((0, 0), (10, 0))
     msp.add_line((10, 0), (10, 10))
     msp.add_line((10, 10), (0, 10))
