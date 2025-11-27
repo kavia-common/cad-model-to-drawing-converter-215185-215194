@@ -2,14 +2,13 @@
   "info": {
     "name": "CAD Backend Service",
     "_postman_id": "7bb0f1ab-03e4-4a0e-a2c6-6d3e2c2e0cad",
-    "description": "Minimal Postman collection for auth, file upload, conversion jobs, and downloads.",
+    "description": "Minimal Postman collection for auth, file upload, conversion jobs, and downloads. Notes: Newman working directory should be the repo root so the file src path resolves. Order: Health -> Register -> Login -> Upload -> Jobs -> Downloads.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3001" },
     { "key": "email", "value": "admin@example.com" },
     { "key": "password", "value": "Admin@12345" },
-    { "key": "token", "value": "" },
     { "key": "job_id", "value": "" }
   ],
   "item": [
@@ -41,8 +40,10 @@
           "listen": "test",
           "script": {
             "exec": [
+              "// Save JWT for subsequent requests",
               "const data = pm.response.json();",
-              "pm.environment.set('token', data.access_token);"
+              "const token = data && data.access_token ? data.access_token : '';",
+              "pm.environment.set('access_token', token);"
             ],
             "type": "text/javascript"
           }
@@ -59,7 +60,7 @@
             { "key": "password", "value": "{{password}}", "type": "text" }
           ]
         },
-        "description": "Login and store JWT token."
+        "description": "Login and store JWT token as environment variable 'access_token'."
       }
     },
     {
@@ -69,8 +70,9 @@
           "listen": "test",
           "script": {
             "exec": [
+              "// Capture job_id for later requests",
               "const data = pm.response.json();",
-              "pm.environment.set('job_id', data.job_id);"
+              "if (data && data.job_id) { pm.environment.set('job_id', data.job_id); }"
             ],
             "type": "text/javascript"
           }
@@ -79,7 +81,7 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
         ],
         "url": "{{baseUrl}}/files/upload",
         "body": {
@@ -88,11 +90,13 @@
             {
               "key": "file",
               "type": "file",
-              "src": []
+              "src": [
+                "cad-model-to-drawing-converter-215185-215194/cad_backend_service/tests/assets/dummy.step"
+              ]
             }
           ]
         },
-        "description": "Upload a CAD file (STEP/IGES/STL) and create a conversion job."
+        "description": "Upload a CAD file (STEP/IGES/STL) and create a conversion job. File path is relative to repo root when running newman."
       }
     },
     {
@@ -100,7 +104,7 @@
       "request": {
         "method": "GET",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
         ],
         "url": "{{baseUrl}}/jobs/{{job_id}}",
         "description": "Get job details and status."
@@ -111,7 +115,7 @@
       "request": {
         "method": "GET",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
         ],
         "url": "{{baseUrl}}/jobs",
         "description": "List all jobs for the current user."
@@ -122,7 +126,7 @@
       "request": {
         "method": "GET",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
         ],
         "url": "{{baseUrl}}/downloads/{{job_id}}/pdf",
         "description": "Download the generated PDF."
@@ -133,7 +137,7 @@
       "request": {
         "method": "GET",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
         ],
         "url": "{{baseUrl}}/downloads/{{job_id}}/dxf",
         "description": "Download the generated DXF."
@@ -144,7 +148,7 @@
       "request": {
         "method": "GET",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
         ],
         "url": "{{baseUrl}}/downloads/{{job_id}}/preview",
         "description": "Download the generated preview (PNG)."
