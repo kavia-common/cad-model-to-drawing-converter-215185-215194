@@ -4,16 +4,38 @@ import uuid
 import datetime
 from typing import Optional, List
 
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException,
+    status,
+    UploadFile,
+    File,
+    BackgroundTasks,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
 from starlette.responses import FileResponse
+
 # Note: SessionMiddleware requires 'itsdangerous' to be installed for secure cookie signing.
 from starlette.middleware.sessions import SessionMiddleware
 
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, ForeignKey, Text
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session as SASession
+from sqlalchemy import (
+    create_engine,
+    Column,
+    String,
+    Integer,
+    DateTime,
+    ForeignKey,
+    Text,
+)
+from sqlalchemy.orm import (
+    sessionmaker,
+    declarative_base,
+    relationship,
+    Session as SASession,
+)
 from sqlalchemy.exc import IntegrityError
 
 import jwt
@@ -32,7 +54,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change")
 JWT_EXPIRE_MIN = int(os.getenv("JWT_EXPIRE_MIN", "60"))
 STORAGE_DIR = os.getenv("STORAGE_DIR", "./storage")
-ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")] if os.getenv("ALLOWED_ORIGINS") else ["*"]
+ALLOWED_ORIGINS = (
+    [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
+    if os.getenv("ALLOWED_ORIGINS")
+    else ["*"]
+)
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 os.makedirs(os.path.join(STORAGE_DIR, "uploads"), exist_ok=True)
@@ -48,6 +74,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+
 # Models
 class User(Base):
     __tablename__ = "users"
@@ -62,7 +89,9 @@ class User(Base):
 class FileRecord(Base):
     __tablename__ = "files"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     original_filename = Column(String(255), nullable=False)
     stored_path = Column(Text, nullable=False)
     content_type = Column(String(100), nullable=True)
@@ -70,7 +99,9 @@ class FileRecord(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User")
-    job = relationship("Job", back_populates="file", uselist=False, cascade="all,delete")
+    job = relationship(
+        "Job", back_populates="file", uselist=False, cascade="all,delete"
+    )
 
 
 class JobStatus:
@@ -83,8 +114,12 @@ class JobStatus:
 class Job(Base):
     __tablename__ = "jobs"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    file_id = Column(Integer, ForeignKey("files.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    file_id = Column(
+        Integer, ForeignKey("files.id", ondelete="CASCADE"), nullable=False
+    )
     status = Column(String(20), default=JobStatus.PENDING, index=True)
     input_format = Column(String(20), nullable=True)
     output_pdf_path = Column(Text, nullable=True)
@@ -92,7 +127,9 @@ class Job(Base):
     preview_image_path = Column(Text, nullable=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
+    )
 
     user = relationship("User", back_populates="jobs")
     file = relationship("FileRecord", back_populates="job")
@@ -101,14 +138,17 @@ class Job(Base):
 def create_all():
     Base.metadata.create_all(bind=engine)
 
+
 # Pydantic Schemas
 class Token(BaseModel):
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field("bearer", description="Token type")
 
+
 class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=6, description="User password")
+
 
 class UserOut(BaseModel):
     id: int
@@ -117,10 +157,12 @@ class UserOut(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UploadResponse(BaseModel):
     file_id: int
     job_id: int
     status: str
+
 
 class JobOut(BaseModel):
     id: int
@@ -136,6 +178,7 @@ class JobOut(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 # Utility functions
 def get_db() -> SASession:
@@ -160,9 +203,12 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: SASession = Depends(get_db)) -> User:
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: SASession = Depends(get_db)
+) -> User:
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
     )
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
@@ -180,7 +226,10 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: SASession = Depend
 # App setup
 app = FastAPI(
     title="CAD Backend Service",
-    description="API for CAD model to 2D drawing conversion with auth, upload, conversion, jobs, and downloads.",
+    description=(
+        "API for CAD model to 2D drawing conversion with auth, upload, "
+        "conversion, jobs, and downloads."
+    ),
     version="1.0.0",
     openapi_tags=[
         {"name": "Health", "description": "Service health and metadata"},
@@ -209,6 +258,7 @@ create_all()
 if os.getenv("SEED_ADMIN", "").lower() == "true":
     try:
         from src.api.seed_admin import seed_admin
+
         seed_admin()
     except Exception as _e:
         # Do not crash app for seed issues; log to console for dev
@@ -220,6 +270,7 @@ if os.getenv("SEED_ADMIN", "").lower() == "true":
 def health_check():
     """Health check endpoint."""
     return {"message": "Healthy"}
+
 
 # Auth Endpoints
 # PUBLIC_INTERFACE
@@ -236,9 +287,18 @@ def register(payload: RegisterRequest, db: SASession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     return u
 
+
 # PUBLIC_INTERFACE
-@app.post("/auth/login", response_model=Token, tags=["Auth"], summary="Login with password (OAuth2)")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: SASession = Depends(get_db)):
+@app.post(
+    "/auth/login",
+    response_model=Token,
+    tags=["Auth"],
+    summary="Login with password (OAuth2)",
+)
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: SASession = Depends(get_db),
+):
     """
     Authenticate user and return JWT.
 
@@ -254,12 +314,13 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: SASession = Depe
 
 
 # Upload and conversion orchestration
-
 ALLOWED_UPLOAD_EXTS = {".step", ".stp", ".iges", ".igs", ".stl"}
+
 
 def _ext_of(filename: str) -> str:
     _, ext = os.path.splitext(filename.lower())
     return ext
+
 
 def _safe_store_upload(user_id: int, up: UploadFile) -> str:
     uid = str(uuid.uuid4())
@@ -270,6 +331,7 @@ def _safe_store_upload(user_id: int, up: UploadFile) -> str:
         shutil.copyfileobj(up.file, f)
     return dest
 
+
 def _make_preview_image(job_id: int, preview_path: str):
     # Generate a simple placeholder preview
     img = Image.new("RGB", (800, 600), color=(245, 247, 250))
@@ -278,15 +340,21 @@ def _make_preview_image(job_id: int, preview_path: str):
     draw.text((50, 50), text, fill=(0, 0, 0))
     img.save(preview_path, format="PNG")
 
+
 def _make_pdf(job_id: int, pdf_path: str):
     c = canvas.Canvas(pdf_path, pagesize=letter)
     width, height = letter
     c.setFont("Helvetica", 16)
     c.drawString(72, height - 72, f"CAD Conversion PDF for Job #{job_id}")
     c.setFont("Helvetica", 12)
-    c.drawString(72, height - 100, "This is a stubbed PDF generated by the backend.")
+    c.drawString(
+        72,
+        height - 100,
+        "This is a stubbed PDF generated by the backend.",
+    )
     c.showPage()
     c.save()
+
 
 def _make_dxf(job_id: int, dxf_path: str):
     doc = ezdxf.new("R2010")
@@ -297,6 +365,7 @@ def _make_dxf(job_id: int, dxf_path: str):
     msp.add_line((10, 10), (0, 10))
     msp.add_line((0, 10), (0, 0))
     doc.saveas(dxf_path)
+
 
 def _run_conversion(db_session: SASession, job_id: int):
     job: Job = db_session.query(Job).get(job_id)
@@ -326,13 +395,17 @@ def _run_conversion(db_session: SASession, job_id: int):
         job.error_message = str(e)
         db_session.commit()
 
+
 # PUBLIC_INTERFACE
 @app.post(
     "/files/upload",
     response_model=UploadResponse,
     tags=["Files"],
     summary="Upload CAD file and create conversion job",
-    description="Accepts a CAD model file (STEP/IGES/STL) and starts a background conversion job."
+    description=(
+        "Accepts a CAD model file (STEP/IGES/STL) and starts a background "
+        "conversion job."
+    ),
 )
 async def upload_file(
     background_tasks: BackgroundTasks,
@@ -342,7 +415,10 @@ async def upload_file(
 ):
     ext = _ext_of(file.filename)
     if ext not in ALLOWED_UPLOAD_EXTS:
-        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {ext}",
+        )
     stored_path = _safe_store_upload(current_user.id, file)
     file_size = os.path.getsize(stored_path)
     fr = FileRecord(
@@ -371,55 +447,117 @@ async def upload_file(
 
     return UploadResponse(file_id=fr.id, job_id=job.id, status=job.status)
 
+
 # Jobs endpoints
 # PUBLIC_INTERFACE
 @app.get("/jobs", response_model=List[JobOut], tags=["Jobs"], summary="List my jobs")
-def list_jobs(db: SASession = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_jobs(
+    db: SASession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """List jobs belonging to the authenticated user."""
-    jobs = db.query(Job).filter(Job.user_id == current_user.id).order_by(Job.created_at.desc()).all()
+    jobs = (
+        db.query(Job)
+        .filter(Job.user_id == current_user.id)
+        .order_by(Job.created_at.desc())
+        .all()
+    )
     return jobs
+
 
 # PUBLIC_INTERFACE
 @app.get("/jobs/{job_id}", response_model=JobOut, tags=["Jobs"], summary="Get job detail")
-def get_job(job_id: int, db: SASession = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_job(
+    job_id: int,
+    db: SASession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Get detail for a specific job."""
-    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    job = (
+        db.query(Job)
+        .filter(Job.id == job_id, Job.user_id == current_user.id)
+        .first()
+    )
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
+
 # Downloads
 def _ensure_job_access(db: SASession, job_id: int, user_id: int) -> Job:
-    job = db.query(Job).filter(Job.id == job_id, Job.user_id == user_id).first()
+    job = (
+        db.query(Job)
+        .filter(Job.id == job_id, Job.user_id == user_id)
+        .first()
+    )
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     if job.status != JobStatus.COMPLETED:
         raise HTTPException(status_code=400, detail=f"Job not ready: {job.status}")
     return job
 
+
 # PUBLIC_INTERFACE
-@app.get("/downloads/{job_id}/pdf", tags=["Downloads"], summary="Download PDF result")
-def download_pdf(job_id: int, db: SASession = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.get(
+    "/downloads/{job_id}/pdf",
+    tags=["Downloads"],
+    summary="Download PDF result",
+)
+def download_pdf(
+    job_id: int,
+    db: SASession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Download the generated PDF for the completed job."""
     job = _ensure_job_access(db, job_id, current_user.id)
     if not job.output_pdf_path or not os.path.exists(job.output_pdf_path):
         raise HTTPException(status_code=404, detail="PDF not found")
-    return FileResponse(job.output_pdf_path, filename=os.path.basename(job.output_pdf_path), media_type="application/pdf")
+    return FileResponse(
+        job.output_pdf_path,
+        filename=os.path.basename(job.output_pdf_path),
+        media_type="application/pdf",
+    )
+
 
 # PUBLIC_INTERFACE
-@app.get("/downloads/{job_id}/dxf", tags=["Downloads"], summary="Download DXF result")
-def download_dxf(job_id: int, db: SASession = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.get(
+    "/downloads/{job_id}/dxf",
+    tags=["Downloads"],
+    summary="Download DXF result",
+)
+def download_dxf(
+    job_id: int,
+    db: SASession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Download the generated DXF for the completed job."""
     job = _ensure_job_access(db, job_id, current_user.id)
     if not job.output_dxf_path or not os.path.exists(job.output_dxf_path):
         raise HTTPException(status_code=404, detail="DXF not found")
-    return FileResponse(job.output_dxf_path, filename=os.path.basename(job.output_dxf_path), media_type="application/dxf")
+    return FileResponse(
+        job.output_dxf_path,
+        filename=os.path.basename(job.output_dxf_path),
+        media_type="application/dxf",
+    )
+
 
 # PUBLIC_INTERFACE
-@app.get("/downloads/{job_id}/preview", tags=["Downloads"], summary="Download preview image (PNG)")
-def download_preview(job_id: int, db: SASession = Depends(get_db), current_user: User = Depends(get_current_user)):
+@app.get(
+    "/downloads/{job_id}/preview",
+    tags=["Downloads"],
+    summary="Download preview image (PNG)",
+)
+def download_preview(
+    job_id: int,
+    db: SASession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Download the generated preview image for the completed job."""
     job = _ensure_job_access(db, job_id, current_user.id)
     if not job.preview_image_path or not os.path.exists(job.preview_image_path):
         raise HTTPException(status_code=404, detail="Preview not found")
-    return FileResponse(job.preview_image_path, filename=os.path.basename(job.preview_image_path), media_type="image/png")
+    return FileResponse(
+        job.preview_image_path,
+        filename=os.path.basename(job.preview_image_path),
+        media_type="image/png",
+    )

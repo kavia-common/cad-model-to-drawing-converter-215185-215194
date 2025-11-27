@@ -4,6 +4,7 @@ from sqlalchemy import select
 
 from src.api.main import SessionLocal, User, hash_password
 
+
 # PUBLIC_INTERFACE
 def seed_admin(email: str = None, password: str = None) -> None:
     """

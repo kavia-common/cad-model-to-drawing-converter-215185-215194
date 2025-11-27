@@ -3,6 +3,7 @@ import os
 
 from src.api.main import app
 
+
 # PUBLIC_INTERFACE
 def generate_openapi_file(path: str = "interfaces/openapi.json"):
     """
@@ -17,6 +18,7 @@ def generate_openapi_file(path: str = "interfaces/openapi.json"):
     os.makedirs(output_dir, exist_ok=True)
     with open(path, "w") as f:
         json.dump(openapi_schema, f, indent=2)
+
 
 if __name__ == "__main__":
     generate_openapi_file()

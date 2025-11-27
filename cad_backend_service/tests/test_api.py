@@ -15,7 +15,11 @@ def auth_headers():
     # register (idempotent)
     client.post("/auth/register", json={"email": TEST_EMAIL, "password": TEST_PASS})
     # login
-    resp = client.post("/auth/login", data={"username": TEST_EMAIL, "password": TEST_PASS}, headers={"content-type": "application/x-www-form-urlencoded"})
+    resp = client.post(
+        "/auth/login",
+        data={"username": TEST_EMAIL, "password": TEST_PASS},
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
     assert resp.status_code == 200
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -32,7 +36,11 @@ def test_register_and_login():
     email = f"user_{int(time.time())}@example.com"
     r = client.post("/auth/register", json={"email": email, "password": TEST_PASS})
     assert r.status_code in (200, 400)  # may already exist if rerun
-    r = client.post("/auth/login", data={"username": email, "password": TEST_PASS}, headers={"content-type": "application/x-www-form-urlencoded"})
+    r = client.post(
+        "/auth/login",
+        data={"username": email, "password": TEST_PASS},
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
     assert r.status_code == 200
     body = r.json()
     assert "access_token" in body
