@@ -203,6 +203,16 @@ app.add_middleware(SessionMiddleware, secret_key=JWT_SECRET)
 # Create tables on startup
 create_all()
 
+# Optionally seed an admin user on startup if env flag is set (SAFE/IDEMPOTENT)
+# Set SEED_ADMIN=true to enable. ADMIN_EMAIL/ADMIN_PASSWORD can be provided.
+if os.getenv("SEED_ADMIN", "").lower() == "true":
+    try:
+        from src.api.seed_admin import seed_admin
+        seed_admin()
+    except Exception as _e:
+        # Do not crash app for seed issues; log to console for dev
+        print(f"[seed_admin] Warning: {_e}")
+
 
 # PUBLIC_INTERFACE
 @app.get("/", tags=["Health"], summary="Health Check")

@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "CAD Backend Service",
+    "_postman_id": "7bb0f1ab-03e4-4a0e-a2c6-6d3e2c2e0cad",
+    "description": "Minimal Postman collection for auth, file upload, conversion jobs, and downloads.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "email", "value": "admin@example.com" },
+    { "key": "password", "value": "Admin@12345" },
+    { "key": "token", "value": "" },
+    { "key": "job_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/",
+        "description": "Service health endpoint"
+      }
+    },
+    {
+      "name": "Auth - Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "description": "Register a new user (idempotent)."
+      }
+    },
+    {
+      "name": "Auth - Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "pm.environment.set('token', data.access_token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "username", "value": "{{email}}", "type": "text" },
+            { "key": "password", "value": "{{password}}", "type": "text" }
+          ]
+        },
+        "description": "Login and store JWT token."
+      }
+    },
+    {
+      "name": "Files - Upload and Create Job",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "pm.environment.set('job_id', data.job_id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/files/upload",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": []
+            }
+          ]
+        },
+        "description": "Upload a CAD file (STEP/IGES/STL) and create a conversion job."
+      }
+    },
+    {
+      "name": "Jobs - Get Job",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/jobs/{{job_id}}",
+        "description": "Get job details and status."
+      }
+    },
+    {
+      "name": "Jobs - List",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/jobs",
+        "description": "List all jobs for the current user."
+      }
+    },
+    {
+      "name": "Downloads - PDF",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/downloads/{{job_id}}/pdf",
+        "description": "Download the generated PDF."
+      }
+    },
+    {
+      "name": "Downloads - DXF",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/downloads/{{job_id}}/dxf",
+        "description": "Download the generated DXF."
+      }
+    },
+    {
+      "name": "Downloads - Preview",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/downloads/{{job_id}}/preview",
+        "description": "Download the generated preview (PNG)."
+      }
+    }
+  ]
+}

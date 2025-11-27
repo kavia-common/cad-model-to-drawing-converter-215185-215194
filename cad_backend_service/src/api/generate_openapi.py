@@ -5,7 +5,13 @@ from src.api.main import app
 
 # PUBLIC_INTERFACE
 def generate_openapi_file(path: str = "interfaces/openapi.json"):
-    """Generate and write OpenAPI schema to interfaces/openapi.json."""
+    """
+    Generate and write OpenAPI schema to interfaces/openapi.json.
+
+    Notes:
+    - This imports the FastAPI app from src.api.main to ensure all routes are registered.
+    - Update src/api/main.py routes or tags as needed, then rerun this script.
+    """
     openapi_schema = app.openapi()
     output_dir = os.path.dirname(path)
     os.makedirs(output_dir, exist_ok=True)
